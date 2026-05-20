@@ -73,7 +73,7 @@ export default function DashboardPage() {
   }, [isLoading, isLoggedIn, router]);
 
   useEffect(() => {
-    if (user) {
+    if (isLoggedIn) {
       const fetchProjects = async () => {
         setProjectsError("");
         const response = await getProjects();
@@ -95,6 +95,11 @@ export default function DashboardPage() {
 
       const fetchProfiles = async () => {
         setProfilesError("");
+        // Only fetch profiles if we have user data
+        if (!user) {
+          setProfilesLoading(false);
+          return;
+        }
         const response = await getTiaProfiles(user.user_id);
         if (response.error) {
           if (response.status === 0) {
@@ -114,7 +119,7 @@ export default function DashboardPage() {
       fetchProjects();
       fetchProfiles();
     }
-  }, [user]);
+  }, [isLoggedIn, user]);
 
   if (isLoading) {
     return (
@@ -131,7 +136,7 @@ export default function DashboardPage() {
   return (
     <AppLayout>
       <PageHeader
-        title={`Welcome back, ${user.first_name}`}
+        title={user ? `Welcome back, ${user.first_name}` : "Welcome back"}
         description="Here&apos;s an overview of your research activity"
 
       />

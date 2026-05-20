@@ -75,7 +75,13 @@ export default function ProfilesPage() {
   }, [isLoading, isLoggedIn, router]);
 
   useEffect(() => {
-    if (!user) return;
+    if (!isLoggedIn || !user) {
+      if (isLoggedIn && !user) {
+        // Have token but user data not loaded yet - stop loading state
+        setLoading(false);
+      }
+      return;
+    }
 
     const fetchProfiles = async () => {
       setLoading(true);
@@ -93,7 +99,7 @@ export default function ProfilesPage() {
     };
 
     fetchProfiles();
-  }, [user, addToast]);
+  }, [user, isLoggedIn, addToast]);
 
   const handleEdit = (profile: TiaProfile) => {
     setEditingId(profile.tia_profile_id);

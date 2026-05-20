@@ -66,7 +66,7 @@ export default function ConversationsPage() {
   }, [isLoading, isLoggedIn, router]);
 
   useEffect(() => {
-    if (!user) return;
+    if (!isLoggedIn) return;
 
     const params = new URLSearchParams(window.location.search);
     const projectId = params.get("project_id");
@@ -77,25 +77,35 @@ export default function ConversationsPage() {
         setNewConvProjectId(projectId);
       }, 0);
     }
-  }, [user]);
+  }, [isLoggedIn]);
 
   useEffect(() => {
-    if (!user) return;
+    if (!isLoggedIn) {
+      setLoading(false);
+      return;
+    }
 
     const fetchData = async () => {
       setLoading(true);
 
-      const [convResponse, projResponse, profileResponse] = await Promise.all([
+      const [convResponse, projResponse] = await Promise.all([
         getConversations(),
         getProjects(),
-        getTiaProfiles(user.user_id),
       ]);
 
       if (convResponse.data) setConversations(convResponse.data);
       if (projResponse.data) setProjects(projResponse.data);
-      if (profileResponse.data) setTiaProfiles(profileResponse.data);
 
-      const firstError = convResponse.error || projResponse.error || profileResponse.error;
+      // Only fetch profiles if we have user data
+      if (user) {
+        const profileResponse = await getTiaProfiles(user.user_id);
+        if (profileResponse.data) setTiaProfiles(profileResponse.data);
+        if (profileResponse.error) {
+          addToast(profileResponse.error, "error");
+        }
+      }
+
+      const firstError = convResponse.error || projResponse.error;
       if (firstError) {
         addToast(firstError, "error");
       }
@@ -104,7 +114,7 @@ export default function ConversationsPage() {
     };
 
     fetchData();
-  }, [user, addToast]);
+  }, [user, isLoggedIn, addToast]);
 
   const activeConversations = useMemo(
     () => conversations.filter((conversation) => !conversation.is_archived),
