@@ -11,7 +11,7 @@ from app.schemas.badge import BadgeCreate, BadgeRead, UserBadgeRead
 router = APIRouter(prefix="/badges", tags=["Badges"])
 
 
-@router.post("/", response_model=BadgeRead, status_code=201)
+@router.post("", response_model=BadgeRead, status_code=201)
 async def create_badge( payload: BadgeCreate, db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_active_user),
 ):
     if current_user.role != UserRole.admin:
@@ -35,7 +35,7 @@ async def create_badge( payload: BadgeCreate, db: AsyncSession = Depends(get_db)
     return badge
 
 
-@router.get("/", response_model=list[BadgeRead])
+@router.get("", response_model=list[BadgeRead])
 async def list_badges(db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(Badge))
     return result.scalars().all()

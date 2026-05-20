@@ -11,7 +11,7 @@ from app.schemas.user import UserCreate, UserRead, UserUpdate
 router = APIRouter(prefix="/users", tags=["Users"])
 
 
-@router.post("/", response_model=UserRead, status_code=201)
+@router.post("", response_model=UserRead, status_code=201)
 async def create_user(payload: UserCreate, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(User).where(User.email == payload.email))
     if result.scalar_one_or_none():
@@ -34,7 +34,7 @@ async def create_user(payload: UserCreate, db: AsyncSession = Depends(get_db)):
     return user
 
 
-@router.get("/", response_model=list[UserRead])
+@router.get("", response_model=list[UserRead])
 async def list_users(db: AsyncSession = Depends(get_db),current_user: User = Depends(get_current_active_user),
 ):
     if current_user.role != UserRole.admin:
