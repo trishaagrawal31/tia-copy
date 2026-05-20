@@ -73,10 +73,7 @@ async def list_projects(
 ):
     if current_user.role == UserRole.admin:
         result = await db.execute(select(ResearchProject))
-    else:
-        result = await db.execute(
-            select(ResearchProject).where(ResearchProject.owner_user_id == current_user.user_id)
-        )
+    else:            select(ResearchProject).where(ResearchProject.owner_user_id == current_user.user_id        )
     return result.scalars().all()
 
 
