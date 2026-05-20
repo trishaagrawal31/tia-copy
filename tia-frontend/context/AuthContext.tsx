@@ -34,6 +34,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logout = useCallback(() => {
     localStorage.removeItem("token");
     setUser(null);
+    // Reset initialization so next login can properly initialize
+    isInitializedRef.current = false;
   }, []);
 
   const refreshUser = useCallback(async () => {
@@ -55,8 +57,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Subscribe to auth errors from API calls
   useEffect(() => {
     const handleAuthError = () => {
-      // When a 401 occurs, clear the user state
+      // When a 401 occurs, clear the user state and reset initialization
       setUser(null);
+      isInitializedRef.current = false;
     };
 
     onAuthError(handleAuthError);

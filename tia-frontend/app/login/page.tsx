@@ -62,15 +62,19 @@ export default function LoginPage() {
     }
 
     if (response.data?.access_token) {
+      console.log("[v0] Login successful, setting token");
       setToken(response.data.access_token);
 
       const userResponse = await getCurrentUser<User>();
+      console.log("[v0] getCurrentUser response:", userResponse);
       if (userResponse.data) {
+        console.log("[v0] Setting user and redirecting to dashboard");
         setUser(userResponse.data);
         addToast("Welcome back!", "success");
         router.push("/dashboard");
       } else {
-        const errMsg = "Failed to fetch user information";
+        const errMsg = userResponse.error || "Failed to fetch user information";
+        console.log("[v0] Failed to fetch user:", errMsg);
         setError(errMsg);
         addToast(errMsg, "error");
       }
