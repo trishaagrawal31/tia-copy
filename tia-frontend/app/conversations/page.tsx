@@ -45,7 +45,7 @@ interface TiaProfile {
 
 export default function ConversationsPage() {
   const router = useRouter();
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, isLoggedIn } = useAuth();
   const { addToast } = useToast();
 
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -60,10 +60,10 @@ export default function ConversationsPage() {
   const [creatingConv, setCreatingConv] = useState(false);
 
   useEffect(() => {
-    if (!isLoading && !user) {
+    if (!isLoading && !isLoggedIn) {
       router.push("/login");
     }
-  }, [isLoading, user, router]);
+  }, [isLoading, isLoggedIn, router]);
 
   useEffect(() => {
     if (!user) return;
@@ -168,7 +168,7 @@ export default function ConversationsPage() {
     );
   }
 
-  if (!user) {
+  if (!isLoggedIn) {
     return null;
   }
 

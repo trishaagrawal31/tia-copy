@@ -40,7 +40,7 @@ const formatStatus = (status: string) =>
 
 export default function ProjectsPage() {
   const router = useRouter();
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, isLoggedIn } = useAuth();
   const { addToast } = useToast();
 
   const [projects, setProjects] = useState<Project[]>([]);
@@ -48,10 +48,10 @@ export default function ProjectsPage() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    if (!isLoading && !user) {
+    if (!isLoading && !isLoggedIn) {
       router.push("/login");
     }
-  }, [isLoading, user, router]);
+  }, [isLoading, isLoggedIn, router]);
 
   useEffect(() => {
     if (!user) return;
@@ -82,7 +82,7 @@ export default function ProjectsPage() {
     );
   }
 
-  if (!user) {
+  if (!isLoggedIn) {
     return null;
   }
 

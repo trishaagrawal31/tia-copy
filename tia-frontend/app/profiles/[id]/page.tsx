@@ -45,7 +45,7 @@ export default function ProfileDetailPage() {
   const router = useRouter();
   const params = useParams();
   const profileId = parseInt(params.id as string);
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, isLoggedIn } = useAuth();
   const { addToast } = useToast();
 
   const [profile, setProfile] = useState<TiaProfile | null>(null);
@@ -56,10 +56,10 @@ export default function ProfileDetailPage() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    if (!isLoading && !user) {
+    if (!isLoading && !isLoggedIn) {
       router.push("/login");
     }
-  }, [isLoading, user, router]);
+  }, [isLoading, isLoggedIn, router]);
 
   useEffect(() => {
     if (!user || Number.isNaN(profileId)) return;
@@ -127,7 +127,7 @@ export default function ProfileDetailPage() {
     );
   }
 
-  if (!user) {
+  if (!isLoggedIn) {
     return null;
   }
 

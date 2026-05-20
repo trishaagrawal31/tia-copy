@@ -57,7 +57,7 @@ const formatStatus = (status: string) =>
 
 export default function DashboardPage() {
   const router = useRouter();
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, isLoggedIn } = useAuth();
   const { addToast } = useToast();
 
   const [projects, setProjects] = useState<Project[]>([]);
@@ -67,10 +67,10 @@ export default function DashboardPage() {
   const [projectsError, setProjectsError] = useState("");
   const [profilesError, setProfilesError] = useState("");
   useEffect(() => {
-    if (!isLoading && !user) {
+    if (!isLoading && !isLoggedIn) {
       router.push("/login");
     }
-  }, [isLoading, user, router]);
+  }, [isLoading, isLoggedIn, router]);
 
   useEffect(() => {
     if (user) {
@@ -124,7 +124,7 @@ export default function DashboardPage() {
     );
   }
 
-  if (!user) {
+  if (!isLoggedIn) {
     return null;
   }
 
