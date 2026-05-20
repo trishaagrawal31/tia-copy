@@ -19,7 +19,7 @@ import {
 
 export default function NewProjectPage() {
   const router = useRouter();
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, isLoggedIn } = useAuth();
   const { addToast } = useToast();
 
   const [title, setTitle] = useState("");
@@ -39,7 +39,7 @@ export default function NewProjectPage() {
     );
   }
 
-  if (!user) {
+  if (!isLoggedIn) {
     return null;
   }
 

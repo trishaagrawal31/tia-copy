@@ -34,7 +34,7 @@ export default function ConversationDetailPage() {
   const params = useParams();
   const router = useRouter();
   const conversationId = Number(params.id);
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, isLoggedIn } = useAuth();
   const { addToast } = useToast();
 
   const [conversation, setConversation] = useState<Conversation | null>(null);
@@ -48,10 +48,10 @@ export default function ConversationDetailPage() {
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (!isLoading && !user) {
+    if (!isLoading && !isLoggedIn) {
       router.push("/login");
     }
-  }, [isLoading, user, router]);
+  }, [isLoading, isLoggedIn, router]);
 
   useEffect(() => {
     if (!user || Number.isNaN(conversationId)) return;
@@ -129,7 +129,7 @@ export default function ConversationDetailPage() {
     );
   }
 
-  if (!user) {
+  if (!isLoggedIn) {
     return null;
   }
 

@@ -20,7 +20,7 @@ import {
 
 export default function NewProfilePage() {
   const router = useRouter();
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, isLoggedIn } = useAuth();
   const { addToast } = useToast();
 
   const [name, setName] = useState("");
@@ -41,7 +41,7 @@ export default function NewProfilePage() {
     );
   }
 
-  if (!user) {
+  if (!isLoggedIn) {
     return null;
   }
 

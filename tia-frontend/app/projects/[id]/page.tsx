@@ -74,7 +74,7 @@ export default function ProjectDetailPage() {
   const router = useRouter();
   const params = useParams();
   const projectId = parseInt(params.id as string);
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, isLoggedIn } = useAuth();
   const { addToast } = useToast();
 
   const [project, setProject] = useState<Project | null>(null);
@@ -91,10 +91,10 @@ export default function ProjectDetailPage() {
   const [taskLoading, setTaskLoading] = useState(false);
 
   useEffect(() => {
-    if (!isLoading && !user) {
+    if (!isLoading && !isLoggedIn) {
       router.push("/login");
     }
-  }, [isLoading, user, router]);
+  }, [isLoading, isLoggedIn, router]);
 
   useEffect(() => {
     if (!user || Number.isNaN(projectId)) return;
@@ -163,7 +163,7 @@ export default function ProjectDetailPage() {
     );
   }
 
-  if (!user) {
+  if (!isLoggedIn) {
     return null;
   }
 

@@ -51,7 +51,7 @@ const TONE_OPTIONS = [
 
 export default function ProfilesPage() {
   const router = useRouter();
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, isLoggedIn } = useAuth();
   const { addToast } = useToast();
 
   const [profiles, setProfiles] = useState<TiaProfile[]>([]);
@@ -69,10 +69,10 @@ export default function ProfilesPage() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    if (!isLoading && !user) {
+    if (!isLoading && !isLoggedIn) {
       router.push("/login");
     }
-  }, [isLoading, user, router]);
+  }, [isLoading, isLoggedIn, router]);
 
   useEffect(() => {
     if (!user) return;
@@ -199,7 +199,7 @@ export default function ProfilesPage() {
     );
   }
 
-  if (!user) {
+  if (!isLoggedIn) {
     return null;
   }
 

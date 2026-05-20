@@ -8,17 +8,17 @@ import { Zap } from "lucide-react";
 
 export default function Home() {
   const router = useRouter();
-  const { user, isLoading } = useAuth();
+  const { isLoading, isLoggedIn } = useAuth();
 
   useEffect(() => {
     if (!isLoading) {
-      if (user) {
+      if (isLoggedIn) {
         router.push("/dashboard");
       } else {
         router.push("/login");
       }
     }
-  }, [user, isLoading, router]);
+  }, [isLoggedIn, isLoading, router]);
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-background">

@@ -28,19 +28,24 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [hasToken, setHasToken] = useState(false);
 
   useEffect(() => {
     const initializeAuth = async () => {
       const token = localStorage.getItem("token");
       if (token) {
+        setHasToken(true);
         const response = await getCurrentUser<User>();
         if (response.data) {
           setUser(response.data);
-        } else {
+        } else if (response.status === 401) {
           // Token is invalid or expired - clear it
           localStorage.removeItem("token");
+          setHasToken(false);
           setUser(null);
         }
+        // For other errors (network, server down), keep the token 
+        // and let the user stay "logged in" - pages will handle errors
       }
       setIsLoading(false);
     };
@@ -50,17 +55,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = () => {
     localStorage.removeItem("token");
+    setHasToken(false);
     setUser(null);
   };
 
   const setToken = (token: string) => {
     localStorage.setItem("token", token);
+    setHasToken(true);
   };
 
   const value: AuthContextType = {
     user,
     isLoading,
-    isLoggedIn: !!user,
+    isLoggedIn: !!user || hasToken,
     setUser,
     logout,
     setToken,
