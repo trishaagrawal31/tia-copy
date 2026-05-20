@@ -131,7 +131,7 @@ export default function DashboardPage() {
   return (
     <AppLayout>
       <PageHeader
-        title={`Welcome back, ${user.first_name}`}
+        title={`Welcome back, ${user?.first_name}`}
         description="Here&apos;s an overview of your research activity"
 
       />
