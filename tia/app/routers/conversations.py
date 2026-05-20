@@ -47,7 +47,7 @@ async def user_can_access_conversation(conversation: Conversation, current_user:
 
 # ── Conversations ───────────────────────────────────────
 
-@router.post("/", response_model=ConversationRead, status_code=201)
+@router.post("", response_model=ConversationRead, status_code=201)
 async def create_conversation(
     payload: ConversationCreate,
     db: AsyncSession = Depends(get_db),

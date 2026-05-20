@@ -54,10 +54,7 @@ export default function ProjectsPage() {
   }, [isLoading, isLoggedIn, router]);
 
   useEffect(() => {
-    if (!isLoggedIn) {
-      setLoading(false);
-      return;
-    }
+    if (!user) return;
 
     const fetchProjects = async () => {
       setLoading(true);
@@ -75,7 +72,7 @@ export default function ProjectsPage() {
     };
 
     fetchProjects();
-  }, [isLoggedIn, addToast]);
+  }, [user, addToast]);
 
   if (isLoading) {
     return (

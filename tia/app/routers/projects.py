@@ -30,7 +30,7 @@ async def user_can_access_project(project: ResearchProject, current_user: User, 
     return existing.scalar_one_or_none() is not None
 
 
-@router.post("/", response_model=ProjectRead, status_code=201)
+@router.post("", response_model=ProjectRead, status_code=201)
 async def create_project(
     payload: ProjectCreate,
     db: AsyncSession = Depends(get_db),
@@ -66,7 +66,7 @@ async def create_project(
     return project
 
 
-@router.get("/", response_model=list[ProjectRead])
+@router.get("", response_model=list[ProjectRead])
 async def list_projects(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
