@@ -65,7 +65,7 @@ async def create_conversation(
     return conversation
 
 
-@router.get("/", response_model=list[ConversationRead])
+@router.get("", response_model=list[ConversationRead])
 async def list_conversations(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
