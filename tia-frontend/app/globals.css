@@ -61,7 +61,7 @@
     font-size: 16px;
   }
   
-  /* Responsive base font size for better readability */
+  /* Responsive base font size for better readability on larger screens */
   @media (min-width: 640px) {
     html {
       font-size: 16px;
@@ -77,6 +77,25 @@
   @media (min-width: 1280px) {
     html {
       font-size: 18px;
+    }
+  }
+  
+  @media (min-width: 1536px) {
+    html {
+      font-size: 19px;
+    }
+  }
+  
+  @media (min-width: 1920px) {
+    html {
+      font-size: 20px;
+    }
+  }
+  
+  /* Extra large monitors (2K and above) */
+  @media (min-width: 2560px) {
+    html {
+      font-size: 22px;
     }
   }
   
@@ -107,6 +126,18 @@
   @media (min-width: 1024px) {
     .card {
       padding: 1.5rem;
+    }
+  }
+  
+  @media (min-width: 1536px) {
+    .card {
+      padding: 1.75rem;
+    }
+  }
+  
+  @media (min-width: 1920px) {
+    .card {
+      padding: 2rem;
     }
   }
   

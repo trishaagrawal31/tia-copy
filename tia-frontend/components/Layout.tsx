@@ -114,7 +114,7 @@ export function Sidebar({ user, onLogout, mobileOpen, onMobileClose }: SidebarPr
   return (
     <>
       {/* Desktop Sidebar */}
-      <aside className="hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0 bg-card border-r border-border">
+      <aside className="hidden lg:flex lg:flex-col lg:w-64 2xl:w-72 lg:fixed lg:inset-y-0 bg-card border-r border-border">
         {sidebarContent}
       </aside>
 
@@ -125,7 +125,7 @@ export function Sidebar({ user, onLogout, mobileOpen, onMobileClose }: SidebarPr
             className="fixed inset-0 bg-foreground/50 z-40 lg:hidden"
             onClick={onMobileClose}
           />
-          <aside className="fixed inset-y-0 left-0 w-64 bg-card border-r border-border z-50 lg:hidden animate-slide-in-right">
+          <aside className="fixed inset-y-0 left-0 w-64 sm:w-72 bg-card border-r border-border z-50 lg:hidden animate-slide-in-right">
             <button
               onClick={onMobileClose}
               className="absolute top-4 right-4 p-2 rounded-lg hover:bg-secondary"
@@ -228,7 +228,7 @@ export function AppLayout({ children }: AppLayoutProps) {
         onMobileClose={() => setMobileOpen(false)}
       />
       
-      <div className="lg:pl-64">
+      <div className="lg:pl-64 2xl:pl-72">
         {children}
       </div>
     </div>

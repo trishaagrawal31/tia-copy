@@ -75,12 +75,11 @@ export default function NewProjectPage() {
       // Provide more helpful error messages
       if (response.status === 0) {
         setError("Cannot connect to the backend server. Please ensure it's running on http://localhost:8000");
-      } else if (response.status === 401) {
-        setError("Session expired. Please log in again.");
-      } else {
+      } else if (response.status !== 401) {
+        // Don't show error for 401 - auth context handles redirect
         setError(response.error);
+        addToast(response.error, "error");
       }
-      addToast(response.error, "error");
       setLoading(false);
       return;
     }
