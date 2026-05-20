@@ -75,7 +75,6 @@ export default function LoginPage() {
         addToast(errMsg, "error");
       }
     }
-    }
     setLoading(false);
   };
 
