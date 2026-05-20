@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from "react";
+import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
 import { getCurrentUser, onAuthError, offAuthError } from "@/lib/api";
 
 export interface User {
@@ -29,13 +29,10 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const isInitializedRef = useRef(false);
 
   const logout = useCallback(() => {
     localStorage.removeItem("token");
     setUser(null);
-    // Reset initialization so next login can properly initialize
-    isInitializedRef.current = false;
   }, []);
 
   const refreshUser = useCallback(async () => {
@@ -57,36 +54,43 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Subscribe to auth errors from API calls
   useEffect(() => {
     const handleAuthError = () => {
-      // When a 401 occurs, clear the user state and reset initialization
+      // When a 401 occurs, clear the user state and token
+      localStorage.removeItem("token");
       setUser(null);
-      isInitializedRef.current = false;
     };
 
     onAuthError(handleAuthError);
     return () => offAuthError(handleAuthError);
   }, []);
 
+  // Initialize auth state from localStorage on mount
   useEffect(() => {
-    // Prevent double initialization in strict mode
-    if (isInitializedRef.current) return;
-    isInitializedRef.current = true;
+    let isCancelled = false;
 
     const initializeAuth = async () => {
       const token = localStorage.getItem("token");
       if (token) {
         const response = await getCurrentUser<User>();
-        if (response.data) {
-          setUser(response.data);
-        } else {
-          // Token is invalid or expired - clear it
-          localStorage.removeItem("token");
-          setUser(null);
+        if (!isCancelled) {
+          if (response.data) {
+            setUser(response.data);
+          } else {
+            // Token is invalid or expired - clear it
+            localStorage.removeItem("token");
+            setUser(null);
+          }
         }
       }
-      setIsLoading(false);
+      if (!isCancelled) {
+        setIsLoading(false);
+      }
     };
 
     initializeAuth();
+
+    return () => {
+      isCancelled = true;
+    };
   }, []);
 
   const setToken = useCallback((token: string) => {

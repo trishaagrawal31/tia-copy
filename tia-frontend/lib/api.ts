@@ -110,9 +110,8 @@ export async function apiCall<T>(
     }
 
     if (!response.ok) {
-      // Handle 401 - only clear token and notify if we HAD a token
-      // This prevents login failures from triggering auth error handlers
-      if (response.status === 401 && typeof window !== "undefined" && token) {
+      // Handle 401 - clear token and notify AuthContext
+      if (response.status === 401 && typeof window !== "undefined") {
         localStorage.removeItem("token");
         emitAuthError();
       }
