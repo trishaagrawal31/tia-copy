@@ -1,21 +1,5 @@
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "";
 
-// Auth error event emitter for notifying AuthContext of 401 errors
-type AuthErrorListener = () => void;
-const authErrorListeners: Set<AuthErrorListener> = new Set();
-
-export function onAuthError(listener: AuthErrorListener): void {
-  authErrorListeners.add(listener);
-}
-
-export function offAuthError(listener: AuthErrorListener): void {
-  authErrorListeners.delete(listener);
-}
-
-function emitAuthError(): void {
-  authErrorListeners.forEach((listener) => listener());
-}
-
 type ApiErrorPayload = {
   detail?: unknown;
   message?: unknown;
@@ -110,12 +94,6 @@ export async function apiCall<T>(
     }
 
     if (!response.ok) {
-      // Handle 401 - clear token and notify AuthContext
-      if (response.status === 401 && typeof window !== "undefined") {
-        localStorage.removeItem("token");
-        emitAuthError();
-      }
-
       const errorMessage = getErrorMessage(
         response.status,
         data,

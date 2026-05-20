@@ -81,8 +81,10 @@ export default function DashboardPage() {
           // Provide more helpful error messages based on status
           if (response.status === 0) {
             setProjectsError("Cannot connect to the backend server. Please ensure it's running on http://localhost:8000");
-          } else if (response.status !== 401) {
-            // Don't show error for 401 - auth context handles redirect
+          } else if (response.status === 401) {
+            // Session expired - let the page redirect handle it
+            setProjectsError("");
+          } else {
             setProjectsError(response.error);
           }
         } else if (response.data) {
@@ -97,8 +99,10 @@ export default function DashboardPage() {
         if (response.error) {
           if (response.status === 0) {
             setProfilesError("Cannot connect to the backend server.");
-          } else if (response.status !== 401) {
-            // Don't show error for 401 - auth context handles redirect
+          } else if (response.status === 401) {
+            // Session expired - let the page redirect handle it
+            setProfilesError("");
+          } else {
             setProfilesError(response.error);
           }
         } else if (response.data) {
