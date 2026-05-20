@@ -70,7 +70,11 @@ async def list_conversations(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ):
-    if current_user.role == UserRole.faculty:
+    if current_user.role == UserRole.admin:
+        # Admins can see all conversations
+        result = await db.execute(select(Conversation))
+    elif current_user.role == UserRole.faculty:
+        # Faculty can see conversations for projects they supervise or are assigned to
         faculty_project_ids = await db.execute(
             select(ProjectFaculty.project_id).where(ProjectFaculty.faculty_user_id == current_user.user_id)
         )
@@ -78,8 +82,12 @@ async def list_conversations(
             select(ResearchProject.project_id).where(ResearchProject.faculty_supervisor_id == current_user.user_id)
         )
         project_ids = set(faculty_project_ids.scalars().all()) | set(supervisor_project_ids.scalars().all())
-        result = await db.execute(select(Conversation).where(Conversation.project_id.in_(project_ids))) if project_ids else await db.execute(select(Conversation).where(False))
+        if project_ids:
+            result = await db.execute(select(Conversation).where(Conversation.project_id.in_(project_ids)))
+        else:
+            result = await db.execute(select(Conversation).where(False))
     else:
+        # Students can only see their own conversations
         result = await db.execute(select(Conversation).where(Conversation.user_id == current_user.user_id))
     return result.scalars().all()
 

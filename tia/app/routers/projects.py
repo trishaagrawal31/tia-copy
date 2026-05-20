@@ -73,7 +73,21 @@ async def list_projects(
 ):
     if current_user.role == UserRole.admin:
         result = await db.execute(select(ResearchProject))
+    elif current_user.role == UserRole.faculty:
+        # Faculty can see projects they supervise or are assigned to
+        faculty_project_ids = await db.execute(
+            select(ProjectFaculty.project_id).where(ProjectFaculty.faculty_user_id == current_user.user_id)
+        )
+        supervisor_project_ids = await db.execute(
+            select(ResearchProject.project_id).where(ResearchProject.faculty_supervisor_id == current_user.user_id)
+        )
+        project_ids = set(faculty_project_ids.scalars().all()) | set(supervisor_project_ids.scalars().all())
+        if project_ids:
+            result = await db.execute(select(ResearchProject).where(ResearchProject.project_id.in_(project_ids)))
+        else:
+            result = await db.execute(select(ResearchProject).where(False))
     else:
+        # Students can only see their own projects
         result = await db.execute(
             select(ResearchProject).where(ResearchProject.owner_user_id == current_user.user_id)
         )
