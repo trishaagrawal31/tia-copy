@@ -193,6 +193,15 @@ export async function createUser(userData: {
   });
 }
 
+export async function getUsers(role?: string): Promise<ApiResponse<never[]>> {
+  const endpoint = role ? `/api/users?role=${role}` : "/api/users";
+  return apiCall(endpoint);
+}
+
+export async function getFacultyUsers(): Promise<ApiResponse<never[]>> {
+  return getUsers("faculty");
+}
+
 export async function getTiaProfiles(
   userId: number
 ): Promise<ApiResponse<never[]>> {

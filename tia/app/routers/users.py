@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException
+from typing import Optional
+
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 import bcrypt
@@ -35,12 +37,30 @@ async def create_user(payload: UserCreate, db: AsyncSession = Depends(get_db)):
 
 
 @router.get("", response_model=list[UserRead])
-async def list_users(db: AsyncSession = Depends(get_db),current_user: User = Depends(get_current_active_user),
+async def list_users(
+    role: Optional[str] = Query(None, description="Filter by role (student, faculty, admin)"),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
 ):
+    # Allow authenticated users to list faculty (for project supervisor selection)
+    if role == "faculty":
+        query = select(User).where(User.role == UserRole.faculty, User.is_active == True)
+        result = await db.execute(query)
+        return result.scalars().all()
+    
+    # Only admins can list all users or filter by other roles
     if current_user.role != UserRole.admin:
         raise HTTPException(status_code=403, detail="Not authorized to view users")
 
-    result = await db.execute(select(User))
+    query = select(User)
+    if role:
+        try:
+            role_enum = UserRole(role)
+            query = query.where(User.role == role_enum)
+        except ValueError:
+            raise HTTPException(status_code=400, detail=f"Invalid role: {role}")
+    
+    result = await db.execute(query)
     return result.scalars().all()
 
 

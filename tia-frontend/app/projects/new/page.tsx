@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
-import { createProject } from "@/lib/api";
+import { createProject, getFacultyUsers } from "@/lib/api";
 import {
   Input,
   Select,
@@ -17,6 +17,14 @@ import {
   LoadingSpinner,
 } from "@/components";
 
+interface FacultyUser {
+  user_id: number;
+  first_name: string;
+  last_name: string;
+  email: string;
+  department?: string;
+}
+
 export default function NewProjectPage() {
   const router = useRouter();
   const { user, isLoading, isLoggedIn } = useAuth();
@@ -27,9 +35,26 @@ export default function NewProjectPage() {
   const [courseCode, setCourseCode] = useState("");
   const [status, setStatus] = useState("planning");
   const [mainDeadline, setMainDeadline] = useState("");
+  const [facultySupervisorId, setFacultySupervisorId] = useState("");
+  const [facultyUsers, setFacultyUsers] = useState<FacultyUser[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [loadingFaculty, setLoadingFaculty] = useState(true);
+
+  useEffect(() => {
+    const fetchFaculty = async () => {
+      const response = await getFacultyUsers();
+      if (response.data) {
+        setFacultyUsers(response.data);
+      }
+      setLoadingFaculty(false);
+    };
+    
+    if (isLoggedIn) {
+      fetchFaculty();
+    }
+  }, [isLoggedIn]);
 
   if (isLoading) {
     return (
@@ -69,6 +94,7 @@ export default function NewProjectPage() {
       course_code: courseCode,
       status,
       main_deadline: mainDeadline || undefined,
+      faculty_supervisor_id: facultySupervisorId ? Number(facultySupervisorId) : undefined,
     });
 
     if (response.error) {
@@ -161,6 +187,21 @@ export default function NewProjectPage() {
                   required
                 />
               </div>
+
+              <Select
+                id="project-faculty"
+                label="Faculty Supervisor"
+                value={facultySupervisorId}
+                onChange={(e) => setFacultySupervisorId(e.target.value)}
+                helperText="Select a faculty member to supervise this project"
+                options={[
+                  { value: "", label: loadingFaculty ? "Loading faculty..." : "Select a faculty supervisor (optional)" },
+                  ...facultyUsers.map((faculty) => ({
+                    value: String(faculty.user_id),
+                    label: `${faculty.first_name} ${faculty.last_name}${faculty.department ? ` - ${faculty.department}` : ""}`,
+                  })),
+                ]}
+              />
 
               <Input
                 id="project-deadline"

@@ -22,7 +22,20 @@ import {
   PageContainer,
   EmptyState,
 } from "@/components";
-import { MessageSquare, Plus, X, ArrowRight } from "lucide-react";
+import { MessageSquare, Plus, X, ArrowRight, User } from "lucide-react";
+
+interface FacultySummary {
+  user_id: number;
+  full_name: string;
+  email: string;
+}
+
+interface ProjectSummary {
+  project_id: number;
+  title: string;
+  faculty_supervisor_id: number | null;
+  faculty_supervisor: FacultySummary | null;
+}
 
 interface Conversation {
   conversation_id: number;
@@ -31,6 +44,7 @@ interface Conversation {
   tia_profile_id: number;
   is_archived: boolean;
   created_at: string;
+  project?: ProjectSummary | null;
 }
 
 interface Project {
@@ -237,6 +251,12 @@ export default function ConversationsPage() {
                             {getProjectName(conversation.project_id)} &bull;{" "}
                             {getProfileName(conversation.tia_profile_id)}
                           </p>
+                          {conversation.project?.faculty_supervisor && (
+                            <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+                              <User className="h-3 w-3" />
+                              Faculty: {conversation.project.faculty_supervisor.full_name}
+                            </p>
+                          )}
                         </div>
                         <div className="flex items-center gap-3 shrink-0">
                           <span className="text-xs text-muted-foreground">

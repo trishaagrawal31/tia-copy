@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import get_current_active_user
@@ -8,14 +9,17 @@ from app.models.conversation import Conversation
 from app.models.message import Message, MessageRole, SenderType
 from app.models.research_project import ProjectFaculty, ResearchProject
 from app.models.user import User, UserRole
-from app.schemas.conversation import ConversationCreate, ConversationRead, ConversationUpdate
+from app.schemas.conversation import ConversationCreate, ConversationRead, ConversationUpdate, ConversationWithProjectRead
 from app.schemas.message import MessageCreate, MessageRead
 
 router = APIRouter(prefix="/conversations", tags=["Conversations"])
 
 
-async def get_conversation_by_id(conversation_id: int, db: AsyncSession) -> Conversation | None:
-    result = await db.execute(select(Conversation).where(Conversation.conversation_id == conversation_id))
+async def get_conversation_by_id(conversation_id: int, db: AsyncSession, load_project: bool = False) -> Conversation | None:
+    query = select(Conversation).where(Conversation.conversation_id == conversation_id)
+    if load_project:
+        query = query.options(selectinload(Conversation.project).selectinload(ResearchProject.supervisor))
+    result = await db.execute(query)
     return result.scalar_one_or_none()
 
 
@@ -65,12 +69,21 @@ async def create_conversation(
     return conversation
 
 
-@router.get("", response_model=list[ConversationRead])
+@router.get("", response_model=list[ConversationWithProjectRead])
 async def list_conversations(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ):
-    if current_user.role == UserRole.faculty:
+    # Build base query with eager loading of project and supervisor
+    base_query = select(Conversation).options(
+        selectinload(Conversation.project).selectinload(ResearchProject.supervisor)
+    )
+    
+    if current_user.role == UserRole.admin:
+        # Admins can see all conversations
+        result = await db.execute(base_query)
+    elif current_user.role == UserRole.faculty:
+        # Faculty can see conversations for projects they supervise or are assigned to
         faculty_project_ids = await db.execute(
             select(ProjectFaculty.project_id).where(ProjectFaculty.faculty_user_id == current_user.user_id)
         )
@@ -78,16 +91,20 @@ async def list_conversations(
             select(ResearchProject.project_id).where(ResearchProject.faculty_supervisor_id == current_user.user_id)
         )
         project_ids = set(faculty_project_ids.scalars().all()) | set(supervisor_project_ids.scalars().all())
-        result = await db.execute(select(Conversation).where(Conversation.project_id.in_(project_ids))) if project_ids else await db.execute(select(Conversation).where(False))
+        if project_ids:
+            result = await db.execute(base_query.where(Conversation.project_id.in_(project_ids)))
+        else:
+            result = await db.execute(base_query.where(False))
     else:
-        result = await db.execute(select(Conversation).where(Conversation.user_id == current_user.user_id))
+        # Students can only see their own conversations
+        result = await db.execute(base_query.where(Conversation.user_id == current_user.user_id))
     return result.scalars().all()
 
 
-@router.get("/{conversation_id}", response_model=ConversationRead)
+@router.get("/{conversation_id}", response_model=ConversationWithProjectRead)
 async def get_conversation(conversation_id: int,db: AsyncSession = Depends(get_db),current_user: User = Depends(get_current_active_user),
 ):
-    conversation = await get_conversation_by_id(conversation_id, db)
+    conversation = await get_conversation_by_id(conversation_id, db, load_project=True)
     if conversation is None:
         raise HTTPException(status_code=404, detail="Conversation not found")
     if not await user_can_access_conversation(conversation, current_user, db):

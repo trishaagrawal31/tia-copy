@@ -23,11 +23,25 @@ interface Message {
   sender_user_id: number | null;
 }
 
+interface FacultySummary {
+  user_id: number;
+  full_name: string;
+  email: string;
+}
+
+interface ProjectSummary {
+  project_id: number;
+  title: string;
+  faculty_supervisor_id: number | null;
+  faculty_supervisor: FacultySummary | null;
+}
+
 interface Conversation {
   conversation_id: number;
   title: string;
   project_id: number;
   tia_profile_id: number;
+  project?: ProjectSummary | null;
 }
 
 export default function ConversationDetailPage() {
@@ -174,6 +188,12 @@ export default function ConversationDetailPage() {
             Conversations
           </Link>
           <h1 className="text-xl font-bold text-foreground truncate">{conversation.title}</h1>
+          {conversation.project?.faculty_supervisor && (
+            <p className="text-sm text-muted-foreground mt-1 flex items-center gap-1">
+              <User className="h-4 w-4" />
+              Faculty Supervisor: {conversation.project.faculty_supervisor.full_name}
+            </p>
+          )}
         </div>
       </header>
 
