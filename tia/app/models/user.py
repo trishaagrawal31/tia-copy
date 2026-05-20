@@ -2,6 +2,7 @@ import enum
 from datetime import datetime
 
 from sqlalchemy import String, Boolean, Enum, DateTime, func
+from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
@@ -27,6 +28,10 @@ class User(Base):
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    @hybrid_property
+    def full_name(self) -> str:
+        return f"{self.first_name} {self.last_name}"
 
     # relationships
     tia_profiles = relationship("TiaProfile", back_populates="user")

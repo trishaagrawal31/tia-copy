@@ -8,6 +8,23 @@ class ConversationCreate(BaseModel):
     title: str | None = None
 
 
+class FacultySummary(BaseModel):
+    user_id: int
+    full_name: str
+    email: str
+
+    model_config = {"from_attributes": True}
+
+
+class ProjectSummary(BaseModel):
+    project_id: int
+    title: str
+    faculty_supervisor_id: int | None = None
+    faculty_supervisor: FacultySummary | None = None
+
+    model_config = {"from_attributes": True}
+
+
 class ConversationRead(BaseModel):
     conversation_id: int
     user_id: int
@@ -18,6 +35,11 @@ class ConversationRead(BaseModel):
     created_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class ConversationWithProjectRead(ConversationRead):
+    """Extended conversation read that includes project and faculty info"""
+    project: ProjectSummary | None = None
 
 
 class ConversationUpdate(BaseModel):
