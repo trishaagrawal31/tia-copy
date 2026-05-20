@@ -2,6 +2,8 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.requests import Request
 
 from app.database import Base, engine
 from app.routers import users, tia_profiles, projects, tasks, conversations, streaks, badges
@@ -19,7 +21,24 @@ async def lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(title="TIA - The Innovative Assistant", version="0.1.0", lifespan=lifespan)
+# Custom middleware to preserve Authorization header on redirects
+class AuthHeaderMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        response = await call_next(request)
+        # If it's a redirect, add the original Authorization header info
+        if response.status_code in (307, 308):
+            auth_header = request.headers.get("Authorization")
+            if auth_header:
+                response.headers["X-Original-Authorization"] = auth_header
+        return response
+
+
+app = FastAPI(
+    title="TIA - The Innovative Assistant", 
+    version="0.1.0", 
+    lifespan=lifespan,
+    redirect_slashes=False,  # Disable automatic trailing slash redirects
+)
 
 # Add CORS middleware
 app.add_middleware(

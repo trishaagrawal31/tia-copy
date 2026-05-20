@@ -17,7 +17,7 @@ def _authorize_user_access(user_id: int, current_user: User) -> None:
         raise HTTPException(status_code=403, detail="Not authorized to manage this user's TIA profiles")
 
 
-@router.post("/", response_model=TiaProfileRead, status_code=201)
+@router.post("", response_model=TiaProfileRead, status_code=201)
 async def create_tia_profile(user_id: int, payload: TiaProfileCreate, db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_active_user),
 ):
     _authorize_user_access(user_id, current_user)
@@ -41,7 +41,7 @@ async def create_tia_profile(user_id: int, payload: TiaProfileCreate, db: AsyncS
     return tia_profile
 
 
-@router.get("/", response_model=list[TiaProfileRead])
+@router.get("", response_model=list[TiaProfileRead])
 async def list_tia_profiles(user_id: int, db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_active_user),
 ):
     _authorize_user_access(user_id, current_user)

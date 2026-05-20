@@ -32,7 +32,7 @@ async def user_can_manage_project(project: ResearchProject, current_user: User, 
     return await user_can_access_project(project, current_user, db)
 
 
-@router.post("/", response_model=TaskRead, status_code=201)
+@router.post("", response_model=TaskRead, status_code=201)
 async def create_task(
     project_id: int,
     payload: TaskCreate,
@@ -70,7 +70,7 @@ async def create_task(
     return task
 
 
-@router.get("/", response_model=list[TaskRead])
+@router.get("", response_model=list[TaskRead])
 async def list_tasks(project_id: int, db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_active_user),
 ):
     project_result = await db.execute(select(ResearchProject).where(ResearchProject.project_id == project_id))
