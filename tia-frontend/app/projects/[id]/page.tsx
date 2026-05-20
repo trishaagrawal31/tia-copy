@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
-import { getProject, getTasks, createTask } from "@/lib/api";
+import { getProject, getTasks, createTask, updateTask, deleteTask } from "@/lib/api";
 import {
   Button,
   LoadingSpinner,
@@ -27,6 +27,8 @@ import {
   Clock,
   AlertCircle,
   X,
+  Pencil,
+  Trash2,
 } from "lucide-react";
 
 interface Project {
@@ -89,6 +91,8 @@ export default function ProjectDetailPage() {
   const [taskDueDate, setTaskDueDate] = useState("");
   const [taskError, setTaskError] = useState("");
   const [taskLoading, setTaskLoading] = useState(false);
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [deletingTaskId, setDeletingTaskId] = useState<number | null>(null);
 
   useEffect(() => {
     if (!isLoading && !isLoggedIn) {
@@ -153,6 +157,79 @@ export default function ProjectDetailPage() {
       addToast("Task added successfully", "success");
     }
     setTaskLoading(false);
+  };
+
+  const handleEditTask = (task: Task) => {
+    setEditingTask(task);
+    setTaskTitle(task.title);
+    setTaskDescription(task.description || "");
+    setTaskType(task.type);
+    setTaskPriority(task.priority);
+    setTaskDueDate(task.due_date ? task.due_date.split("T")[0] : "");
+    setShowTaskForm(true);
+  };
+
+  const handleUpdateTask = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingTask) return;
+
+    setTaskError("");
+    setTaskLoading(true);
+
+    if (!taskTitle.trim()) {
+      setTaskError("Task title is required");
+      setTaskLoading(false);
+      return;
+    }
+
+    const response = await updateTask<Task>(projectId, editingTask.task_id, {
+      title: taskTitle,
+      description: taskDescription,
+      type: taskType,
+      due_date: taskDueDate || undefined,
+      priority: taskPriority,
+    });
+
+    if (response.error) {
+      setTaskError(response.error);
+      addToast(response.error, "error");
+      setTaskLoading(false);
+      return;
+    }
+
+    if (response.data) {
+      setTasks(tasks.map((t) => (t.task_id === editingTask.task_id ? response.data! : t)));
+      resetTaskForm();
+      addToast("Task updated successfully", "success");
+    }
+    setTaskLoading(false);
+  };
+
+  const handleDeleteTask = async (taskId: number) => {
+    setDeletingTaskId(taskId);
+
+    const response = await deleteTask(projectId, taskId);
+
+    if (response.error) {
+      addToast(response.error, "error");
+      setDeletingTaskId(null);
+      return;
+    }
+
+    setTasks(tasks.filter((t) => t.task_id !== taskId));
+    addToast("Task deleted successfully", "success");
+    setDeletingTaskId(null);
+  };
+
+  const resetTaskForm = () => {
+    setTaskTitle("");
+    setTaskDescription("");
+    setTaskType("reading");
+    setTaskPriority("medium");
+    setTaskDueDate("");
+    setShowTaskForm(false);
+    setEditingTask(null);
+    setTaskError("");
   };
 
   if (isLoading) {
@@ -244,7 +321,13 @@ export default function ProjectDetailPage() {
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-lg font-semibold text-foreground">Tasks</h2>
                 <Button
-                  onClick={() => setShowTaskForm(!showTaskForm)}
+                  onClick={() => {
+                    if (showTaskForm) {
+                      resetTaskForm();
+                    } else {
+                      setShowTaskForm(true);
+                    }
+                  }}
                   variant={showTaskForm ? "outline" : "primary"}
                   size="sm"
                 >
@@ -264,9 +347,12 @@ export default function ProjectDetailPage() {
 
               {showTaskForm && (
                 <form
-                  onSubmit={handleAddTask}
+                  onSubmit={editingTask ? handleUpdateTask : handleAddTask}
                   className="mb-6 p-5 bg-secondary/50 rounded-xl border border-border animate-fade-in"
                 >
+                  <h3 className="text-sm font-medium text-foreground mb-4">
+                    {editingTask ? "Edit Task" : "Add New Task"}
+                  </h3>
                   {taskError && (
                     <Alert
                       type="error"
@@ -340,11 +426,11 @@ export default function ProjectDetailPage() {
                         loading={taskLoading}
                         variant="primary"
                       >
-                        {taskLoading ? "Adding..." : "Add Task"}
+                        {taskLoading ? (editingTask ? "Updating..." : "Adding...") : (editingTask ? "Update Task" : "Add Task")}
                       </Button>
                       <Button
                         type="button"
-                        onClick={() => setShowTaskForm(false)}
+                        onClick={resetTaskForm}
                         variant="ghost"
                       >
                         Cancel
@@ -383,9 +469,30 @@ export default function ProjectDetailPage() {
                             </p>
                           )}
                         </div>
-                        <Badge variant={PRIORITY_VARIANTS[task.priority] || "secondary"}>
-                          {task.priority}
-                        </Badge>
+                        <div className="flex items-center gap-2">
+                          <Badge variant={PRIORITY_VARIANTS[task.priority] || "secondary"}>
+                            {task.priority}
+                          </Badge>
+                          <button
+                            onClick={() => handleEditTask(task)}
+                            className="p-1.5 rounded-md hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
+                            title="Edit task"
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteTask(task.task_id)}
+                            disabled={deletingTaskId === task.task_id}
+                            className="p-1.5 rounded-md hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors disabled:opacity-50"
+                            title="Delete task"
+                          >
+                            {deletingTaskId === task.task_id ? (
+                              <LoadingSpinner size="sm" />
+                            ) : (
+                              <Trash2 className="h-4 w-4" />
+                            )}
+                          </button>
+                        </div>
                       </div>
 
                       <div className="flex flex-wrap items-center gap-3 mt-3 text-xs">

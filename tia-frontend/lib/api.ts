@@ -319,6 +319,37 @@ export async function createTask<T = never>(
   });
 }
 
+export async function updateTask<T = never>(
+  projectId: number,
+  taskId: number,
+  taskData: Partial<{
+    title: string;
+    description: string;
+    type: string;
+    due_date: string;
+    priority: string;
+    status: string;
+    estimated_minutes: number;
+  }>
+): Promise<ApiResponse<T>> {
+  return apiCall(`/api/projects/${projectId}/tasks/${taskId}`, {
+    method: "PATCH",
+    body: JSON.stringify({
+      ...taskData,
+      due_date: toApiDateTime(taskData.due_date),
+    }),
+  });
+}
+
+export async function deleteTask(
+  projectId: number,
+  taskId: number
+): Promise<ApiResponse<void>> {
+  return apiCall(`/api/projects/${projectId}/tasks/${taskId}`, {
+    method: "DELETE",
+  });
+}
+
 export async function getConversations(): Promise<ApiResponse<never[]>> {
   return apiCall("/api/conversations");
 }
