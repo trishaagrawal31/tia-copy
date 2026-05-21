@@ -4,7 +4,15 @@ import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
-import { getProject, getTasks, createTask, updateTask, deleteTask } from "@/lib/api";
+import {
+  getProject,
+  getTasks,
+  createTask,
+  updateTask,
+  deleteTask,
+  updateProject,
+  getFacultyUsers,
+} from "@/lib/api";
 import {
   Button,
   LoadingSpinner,
@@ -29,7 +37,14 @@ import {
   X,
   Pencil,
   Trash2,
+  Check,
 } from "lucide-react";
+
+interface FacultySummary {
+  user_id: number;
+  full_name: string;
+  email: string;
+}
 
 interface Project {
   project_id: number;
@@ -39,6 +54,8 @@ interface Project {
   main_deadline: string | null;
   owner_user_id: number;
   course_code: string | null;
+  faculty_supervisor_id: number | null;
+  faculty_supervisor?: FacultySummary | null;
 }
 
 interface Task {
@@ -52,7 +69,10 @@ interface Task {
   estimated_minutes: number | null;
 }
 
-const STATUS_VARIANTS: Record<string, "success" | "warning" | "info" | "secondary" | "danger"> = {
+const STATUS_VARIANTS: Record<
+  string,
+  "success" | "warning" | "info" | "secondary" | "danger"
+> = {
   planning: "info",
   in_progress: "success",
   submitted: "info",
@@ -69,6 +89,14 @@ const PRIORITY_VARIANTS: Record<string, "danger" | "warning" | "success"> = {
   low: "success",
 };
 
+const PROJECT_STATUS_OPTIONS = [
+  { value: "planning", label: "Planning" },
+  { value: "in_progress", label: "In Progress" },
+  { value: "submitted", label: "Submitted" },
+  { value: "completed", label: "Completed" },
+  { value: "archived", label: "Archived" },
+];
+
 const formatStatus = (status: string) =>
   status.replace(/_/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
 
@@ -81,8 +109,17 @@ export default function ProjectDetailPage() {
 
   const [project, setProject] = useState<Project | null>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [facultyUsers, setFacultyUsers] = useState<FacultySummary[]>([]);
   const [projectLoading, setProjectLoading] = useState(true);
   const [tasksLoading, setTasksLoading] = useState(true);
+
+  // Project edit state
+  const [isEditingProject, setIsEditingProject] = useState(false);
+  const [projectFormData, setProjectFormData] = useState<Partial<Project>>({});
+  const [projectSaving, setProjectSaving] = useState(false);
+  const [projectError, setProjectError] = useState("");
+
+  // Task form state
   const [showTaskForm, setShowTaskForm] = useState(false);
   const [taskTitle, setTaskTitle] = useState("");
   const [taskDescription, setTaskDescription] = useState("");
@@ -104,10 +141,20 @@ export default function ProjectDetailPage() {
     if (!user || Number.isNaN(projectId)) return;
 
     const fetchData = async () => {
-      const projectResponse = await getProject(projectId);
+      const [projectResponse, facultyResponse] = await Promise.all([
+        getProject(projectId),
+        getFacultyUsers(),
+      ]);
+
       if (projectResponse.data) {
         setProject(projectResponse.data);
+        setProjectFormData(projectResponse.data);
       }
+
+      if (facultyResponse.data) {
+        setFacultyUsers(facultyResponse.data);
+      }
+
       setProjectLoading(false);
 
       const tasksResponse = await getTasks(projectId);
@@ -119,6 +166,44 @@ export default function ProjectDetailPage() {
 
     fetchData();
   }, [projectId, user]);
+
+  const handleSaveProject = async () => {
+    if (!projectFormData.title?.trim()) {
+      setProjectError("Project title is required");
+      return;
+    }
+
+    setProjectSaving(true);
+    setProjectError("");
+
+    const response = await updateProject(projectId, {
+      title: projectFormData.title?.trim(),
+      description: projectFormData.description?.trim() || undefined,
+      course_code: projectFormData.course_code?.trim() || undefined,
+      status: projectFormData.status,
+      main_deadline: projectFormData.main_deadline || undefined,
+      faculty_supervisor_id: projectFormData.faculty_supervisor_id || undefined,
+    });
+
+    if (response.error) {
+      setProjectError(response.error);
+      addToast(response.error, "error");
+      setProjectSaving(false);
+      return;
+    }
+
+    // Update the local project state
+    setProject({ ...project, ...projectFormData } as Project);
+    setIsEditingProject(false);
+    setProjectSaving(false);
+    addToast("Project updated successfully", "success");
+  };
+
+  const cancelProjectEdit = () => {
+    setIsEditingProject(false);
+    setProjectFormData(project || {});
+    setProjectError("");
+  };
 
   const handleAddTask = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -198,7 +283,9 @@ export default function ProjectDetailPage() {
     }
 
     if (response.data) {
-      setTasks(tasks.map((t) => (t.task_id === editingTask.task_id ? response.data! : t)));
+      setTasks(
+        tasks.map((t) => (t.task_id === editingTask.task_id ? response.data! : t))
+      );
       resetTaskForm();
       addToast("Task updated successfully", "success");
     }
@@ -257,7 +344,11 @@ export default function ProjectDetailPage() {
   if (!project) {
     return (
       <AppLayout>
-        <PageHeader title="Project Not Found" backHref="/projects" backLabel="Projects" />
+        <PageHeader
+          title="Project Not Found"
+          backHref="/projects"
+          backLabel="Projects"
+        />
         <PageContainer>
           <EmptyState
             icon={<AlertCircle className="h-7 w-7 text-muted-foreground" />}
@@ -277,13 +368,25 @@ export default function ProjectDetailPage() {
   return (
     <AppLayout>
       <PageHeader
-        title={project.title}
+        title={isEditingProject ? "Edit Project" : project.title}
         backHref="/projects"
         backLabel="Projects"
         actions={
-          <Badge variant={STATUS_VARIANTS[project.status] || "secondary"}>
-            {formatStatus(project.status)}
-          </Badge>
+          !isEditingProject ? (
+            <div className="flex items-center gap-2">
+              <Badge variant={STATUS_VARIANTS[project.status] || "secondary"}>
+                {formatStatus(project.status)}
+              </Badge>
+              <Button
+                onClick={() => setIsEditingProject(true)}
+                variant="outline"
+                size="sm"
+              >
+                <Pencil className="h-4 w-4" />
+                Edit
+              </Button>
+            </div>
+          ) : null
         }
       />
 
@@ -291,29 +394,175 @@ export default function ProjectDetailPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Main Content */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Project Info */}
+            {/* Project Info / Edit Form */}
             <div className="card p-6">
-              {project.description && (
-                <p className="text-muted-foreground mb-4">{project.description}</p>
+              {projectError && (
+                <Alert
+                  type="error"
+                  message={projectError}
+                  onClose={() => setProjectError("")}
+                  className="mb-4"
+                />
               )}
 
-              <div className="flex flex-wrap gap-4 text-sm">
-                {project.course_code && (
-                  <div className="flex items-center gap-2">
-                    <span className="text-muted-foreground">Course:</span>
-                    <span className="font-medium text-foreground">{project.course_code}</span>
+              {isEditingProject ? (
+                <div className="space-y-4">
+                  <Input
+                    id="project-title"
+                    label="Project Title"
+                    type="text"
+                    value={projectFormData.title || ""}
+                    onChange={(e) =>
+                      setProjectFormData({
+                        ...projectFormData,
+                        title: e.target.value,
+                      })
+                    }
+                    required
+                  />
+
+                  <TextArea
+                    id="project-description"
+                    label="Description"
+                    value={projectFormData.description || ""}
+                    onChange={(e) =>
+                      setProjectFormData({
+                        ...projectFormData,
+                        description: e.target.value,
+                      })
+                    }
+                    placeholder="Describe your project..."
+                    rows={4}
+                  />
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <Input
+                      id="project-course"
+                      label="Course Code"
+                      type="text"
+                      value={projectFormData.course_code || ""}
+                      onChange={(e) =>
+                        setProjectFormData({
+                          ...projectFormData,
+                          course_code: e.target.value,
+                        })
+                      }
+                      placeholder="e.g., CS101"
+                    />
+
+                    <Select
+                      id="project-status"
+                      label="Status"
+                      value={projectFormData.status || "planning"}
+                      onChange={(e) =>
+                        setProjectFormData({
+                          ...projectFormData,
+                          status: e.target.value,
+                        })
+                      }
+                      options={PROJECT_STATUS_OPTIONS}
+                    />
                   </div>
-                )}
-                {project.main_deadline && (
-                  <div className="flex items-center gap-2">
-                    <Calendar className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-muted-foreground">Due:</span>
-                    <span className="font-medium text-foreground">
-                      {new Date(project.main_deadline).toLocaleDateString()}
-                    </span>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <Input
+                      id="project-deadline"
+                      label="Main Deadline"
+                      type="date"
+                      value={
+                        projectFormData.main_deadline
+                          ? projectFormData.main_deadline.split("T")[0]
+                          : ""
+                      }
+                      onChange={(e) =>
+                        setProjectFormData({
+                          ...projectFormData,
+                          main_deadline: e.target.value,
+                        })
+                      }
+                    />
+
+                    <Select
+                      id="project-supervisor"
+                      label="Faculty Supervisor"
+                      value={
+                        projectFormData.faculty_supervisor_id?.toString() || ""
+                      }
+                      onChange={(e) =>
+                        setProjectFormData({
+                          ...projectFormData,
+                          faculty_supervisor_id: e.target.value
+                            ? Number(e.target.value)
+                            : undefined,
+                        })
+                      }
+                      options={[
+                        { value: "", label: "No supervisor" },
+                        ...facultyUsers.map((f) => ({
+                          value: f.user_id.toString(),
+                          label: f.full_name,
+                        })),
+                      ]}
+                    />
                   </div>
-                )}
-              </div>
+
+                  <div className="flex gap-3 pt-4 border-t border-border">
+                    <Button
+                      onClick={handleSaveProject}
+                      disabled={projectSaving}
+                      loading={projectSaving}
+                      variant="primary"
+                    >
+                      <Check className="h-4 w-4" />
+                      Save Changes
+                    </Button>
+                    <Button
+                      onClick={cancelProjectEdit}
+                      variant="ghost"
+                      disabled={projectSaving}
+                    >
+                      <X className="h-4 w-4" />
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  {project.description && (
+                    <p className="text-muted-foreground mb-4">
+                      {project.description}
+                    </p>
+                  )}
+
+                  <div className="flex flex-wrap gap-4 text-sm">
+                    {project.course_code && (
+                      <div className="flex items-center gap-2">
+                        <span className="text-muted-foreground">Course:</span>
+                        <span className="font-medium text-foreground">
+                          {project.course_code}
+                        </span>
+                      </div>
+                    )}
+                    {project.main_deadline && (
+                      <div className="flex items-center gap-2">
+                        <Calendar className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-muted-foreground">Due:</span>
+                        <span className="font-medium text-foreground">
+                          {new Date(project.main_deadline).toLocaleDateString()}
+                        </span>
+                      </div>
+                    )}
+                    {project.faculty_supervisor && (
+                      <div className="flex items-center gap-2">
+                        <span className="text-muted-foreground">Supervisor:</span>
+                        <span className="font-medium text-foreground">
+                          {project.faculty_supervisor.full_name}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
             </div>
 
             {/* Tasks Section */}
@@ -426,13 +675,15 @@ export default function ProjectDetailPage() {
                         loading={taskLoading}
                         variant="primary"
                       >
-                        {taskLoading ? (editingTask ? "Updating..." : "Adding...") : (editingTask ? "Update Task" : "Add Task")}
+                        {taskLoading
+                          ? editingTask
+                            ? "Updating..."
+                            : "Adding..."
+                          : editingTask
+                            ? "Update Task"
+                            : "Add Task"}
                       </Button>
-                      <Button
-                        type="button"
-                        onClick={resetTaskForm}
-                        variant="ghost"
-                      >
+                      <Button type="button" onClick={resetTaskForm} variant="ghost">
                         Cancel
                       </Button>
                     </div>
@@ -462,7 +713,9 @@ export default function ProjectDetailPage() {
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0 flex-1">
-                          <h3 className="font-medium text-foreground">{task.title}</h3>
+                          <h3 className="font-medium text-foreground">
+                            {task.title}
+                          </h3>
                           {task.description && (
                             <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
                               {task.description}
@@ -470,7 +723,9 @@ export default function ProjectDetailPage() {
                           )}
                         </div>
                         <div className="flex items-center gap-2">
-                          <Badge variant={PRIORITY_VARIANTS[task.priority] || "secondary"}>
+                          <Badge
+                            variant={PRIORITY_VARIANTS[task.priority] || "secondary"}
+                          >
                             {task.priority}
                           </Badge>
                           <button
@@ -516,7 +771,9 @@ export default function ProjectDetailPage() {
           {/* Sidebar */}
           <div className="space-y-6">
             <div className="card p-6">
-              <h3 className="font-semibold text-foreground mb-4">Start Conversation</h3>
+              <h3 className="font-semibold text-foreground mb-4">
+                Start Conversation
+              </h3>
               <p className="text-sm text-muted-foreground mb-4">
                 Chat with TIA about this project to get research assistance
               </p>
@@ -536,12 +793,18 @@ export default function ProjectDetailPage() {
               <div className="space-y-3">
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">Total Tasks</span>
-                  <span className="font-medium text-foreground">{tasks.length}</span>
+                  <span className="font-medium text-foreground">
+                    {tasks.length}
+                  </span>
                 </div>
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">Completed</span>
                   <span className="font-medium text-foreground">
-                    {tasks.filter((t) => t.status === "done" || t.status === "completed").length}
+                    {
+                      tasks.filter(
+                        (t) => t.status === "done" || t.status === "completed"
+                      ).length
+                    }
                   </span>
                 </div>
                 <div className="flex items-center justify-between text-sm">
