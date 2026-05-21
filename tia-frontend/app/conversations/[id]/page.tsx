@@ -28,6 +28,7 @@ import {
   Forward,
   Check,
   X,
+  Settings,
 } from "lucide-react";
 
 interface Message {
@@ -66,6 +67,7 @@ interface TiaProfile {
   system_prompt: string;
   tone: string;
   expertise_area: string | null;
+  description?: string;
 }
 
 export default function ConversationDetailPage() {
@@ -78,11 +80,13 @@ export default function ConversationDetailPage() {
   const [conversation, setConversation] = useState<Conversation | null>(null);
   const [historicalMessages, setHistoricalMessages] = useState<Message[]>([]);
   const [tiaProfile, setTiaProfile] = useState<TiaProfile | null>(null);
+  const [allProfiles, setAllProfiles] = useState<TiaProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [showForwardModal, setShowForwardModal] = useState(false);
   const [forwardingMessage, setForwardingMessage] = useState<string>("");
   const [forwarding, setForwarding] = useState(false);
+  const [showProfileSelector, setShowProfileSelector] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -135,6 +139,7 @@ export default function ConversationDetailPage() {
         // Fetch TIA profile for system prompt
         const profilesResponse = await getTiaProfiles(user.user_id);
         if (profilesResponse.data) {
+          setAllProfiles(profilesResponse.data);
           const profile = profilesResponse.data.find(
             (p: TiaProfile) => p.tia_profile_id === convResponse.data.tia_profile_id
           );
@@ -178,18 +183,23 @@ export default function ConversationDetailPage() {
     setInput("");
 
     // Save user message to backend
-    await sendMessageToApi(conversationId, {
+    const saveResponse = await sendMessageToApi(conversationId, {
       content: userMessage,
       sender_type: "user",
       message_role: "user_query",
     });
+    
+    console.log("[v0] User message saved:", saveResponse.error ? saveResponse.error : "Success");
 
-    // Send to AI with context
+    // Send to AI with context from the current TIA profile
     await sendAIMessage(
       { text: userMessage },
       {
         body: {
           systemPrompt: tiaProfile?.system_prompt,
+          profileName: tiaProfile?.name,
+          profileTone: tiaProfile?.tone,
+          profileExpertise: tiaProfile?.expertise_area,
           conversationId,
           projectTitle: conversation?.project?.title,
           facultySupervisor: conversation?.project?.faculty_supervisor?.full_name,
@@ -216,6 +226,8 @@ export default function ConversationDetailPage() {
             content: textContent,
             sender_type: "tia",
             message_role: "tia_response",
+          }).then((response) => {
+            console.log("[v0] TIA response saved:", response.error ? response.error : "Success");
           });
         }
       }
@@ -264,6 +276,15 @@ export default function ConversationDetailPage() {
     }
 
     setForwarding(false);
+  };
+
+  const handleSwitchProfile = (profileId: number) => {
+    const newProfile = allProfiles.find((p) => p.tia_profile_id === profileId);
+    if (newProfile) {
+      setTiaProfile(newProfile);
+      setShowProfileSelector(false);
+      addToast(`Switched to ${newProfile.name} profile`, "success");
+    }
   };
 
   const getMessageText = (message: UIMessage): string => {
@@ -334,13 +355,23 @@ export default function ConversationDetailPage() {
               <h1 className="text-xl font-bold text-foreground truncate">
                 {conversation.title}
               </h1>
-              {conversation.project?.faculty_supervisor && (
-                <p className="text-sm text-muted-foreground mt-1 flex items-center gap-1">
-                  <User className="h-4 w-4" />
-                  Faculty Supervisor:{" "}
-                  {conversation.project.faculty_supervisor.full_name}
-                </p>
-              )}
+              <div className="flex items-center gap-3 mt-1 flex-wrap">
+                {tiaProfile && (
+                  <button
+                    onClick={() => setShowProfileSelector(!showProfileSelector)}
+                    className="text-sm text-primary hover:underline flex items-center gap-1"
+                  >
+                    <Settings className="h-3 w-3" />
+                    {tiaProfile.name}
+                  </button>
+                )}
+                {conversation.project?.faculty_supervisor && (
+                  <span className="text-sm text-muted-foreground flex items-center gap-1">
+                    <User className="h-4 w-4" />
+                    {conversation.project.faculty_supervisor.full_name}
+                  </span>
+                )}
+              </div>
             </div>
             {conversation.project?.faculty_supervisor && (
               <Button
@@ -354,6 +385,45 @@ export default function ConversationDetailPage() {
               </Button>
             )}
           </div>
+          
+          {/* Profile Selector Dropdown */}
+          {showProfileSelector && allProfiles.length > 0 && (
+            <div className="mt-3 p-3 bg-secondary/50 rounded-xl border border-border animate-fade-in">
+              <p className="text-xs text-muted-foreground mb-2 font-medium">
+                Switch TIA Profile
+              </p>
+              <div className="grid gap-2">
+                {allProfiles.map((profile) => (
+                  <button
+                    key={profile.tia_profile_id}
+                    onClick={() => handleSwitchProfile(profile.tia_profile_id)}
+                    className={`text-left p-3 rounded-lg transition-colors ${
+                      tiaProfile?.tia_profile_id === profile.tia_profile_id
+                        ? "bg-primary/10 border border-primary/30"
+                        : "hover:bg-secondary border border-transparent"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium text-sm text-foreground">
+                        {profile.name}
+                      </span>
+                      {tiaProfile?.tia_profile_id === profile.tia_profile_id && (
+                        <Check className="h-4 w-4 text-primary" />
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {profile.tone} &bull; {profile.expertise_area || "General"}
+                    </p>
+                    {profile.description && (
+                      <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
+                        {profile.description}
+                      </p>
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </header>
 
