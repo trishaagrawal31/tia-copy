@@ -141,7 +141,7 @@ export default function ConversationDetailPage() {
         if (profilesResponse.data) {
           setAllProfiles(profilesResponse.data);
           const profile = profilesResponse.data.find(
-            (p: TiaProfile) => p.tia_profile_id === convResponse.data.tia_profile_id
+            (p: TiaProfile) => p.tia_profile_id === (convResponse.data as any)?.tia_profile_id
           );
           if (profile) {
             setTiaProfile(profile);
@@ -263,7 +263,7 @@ export default function ConversationDetailPage() {
           parts: [
             {
               type: "text" as const,
-              text: `[Forwarded to ${conversation.project.faculty_supervisor?.full_name}]\n\n${forwardingMessage}`,
+              text: `[Forwarded to ${conversation.project?.faculty_supervisor?.full_name}]\n\n${forwardingMessage}`,
             },
           ],
           createdAt: new Date(),
@@ -498,8 +498,8 @@ export default function ConversationDetailPage() {
                             : "text-muted-foreground"
                         }`}
                       >
-                        {message.createdAt
-                          ? new Date(message.createdAt).toLocaleTimeString([], {
+                        {(message as any)?.createdAt
+                          ? new Date((message as any)?.createdAt).toLocaleTimeString([], {
                               hour: "2-digit",
                               minute: "2-digit",
                             })
