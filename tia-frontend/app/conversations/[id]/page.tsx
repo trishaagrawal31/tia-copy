@@ -183,13 +183,11 @@ export default function ConversationDetailPage() {
     setInput("");
 
     // Save user message to backend
-    const saveResponse = await sendMessageToApi(conversationId, {
+    await sendMessageToApi(conversationId, {
       content: userMessage,
       sender_type: "user",
       message_role: "user_query",
     });
-    
-    console.log("[v0] User message saved:", saveResponse.error ? saveResponse.error : "Success");
 
     // Send to AI with context from the current TIA profile
     await sendAIMessage(
@@ -226,8 +224,6 @@ export default function ConversationDetailPage() {
             content: textContent,
             sender_type: "tia",
             message_role: "tia_response",
-          }).then((response) => {
-            console.log("[v0] TIA response saved:", response.error ? response.error : "Success");
           });
         }
       }

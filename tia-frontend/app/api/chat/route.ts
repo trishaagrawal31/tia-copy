@@ -4,8 +4,14 @@ import {
   streamText,
   UIMessage,
 } from "ai";
+import { createGroq } from "@ai-sdk/groq";
 
 export const maxDuration = 30;
+
+// Create Groq provider instance
+const groq = createGroq({
+  apiKey: process.env.GROQ_API_KEY,
+});
 
 export async function POST(req: Request) {
   const {
@@ -81,8 +87,8 @@ Always be supportive and encouraging. Remember that your role is to assist, not 
 the student's own critical thinking and their faculty supervisor's guidance.`;
 
   const result = streamText({
-    // Using Groq via Vercel AI Gateway
-    model: "groq/llama-3.3-70b-versatile",
+    // Using Groq directly with LLaMA 3.3 70B
+    model: groq("llama-3.3-70b-versatile"),
     system: contextualSystemPrompt,
     messages: await convertToModelMessages(messages),
     abortSignal: req.signal,
@@ -90,11 +96,9 @@ the student's own critical thinking and their faculty supervisor's guidance.`;
 
   return result.toUIMessageStreamResponse({
     originalMessages: messages,
-    onFinish: async ({ messages: allMessages, isAborted }) => {
+    onFinish: async ({ isAborted }) => {
       if (isAborted) return;
       // Messages are persisted via the existing API, not here
-      // This callback could be used for analytics or logging
-      console.log("[v0] AI response completed for conversation:", conversationId);
     },
     consumeSseStream: consumeStream,
   });
